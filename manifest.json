@@ -2,7 +2,7 @@
   "name": "SoleVault — Resale Intelligence",
   "short_name": "SoleVault",
   "description": "Track and analyze your sneaker resale inventory",
-  "start_url": "SoleVault-PhotoScan.html",
+  "start_url": ".",
   "display": "standalone",
   "orientation": "portrait-primary",
   "background_color": "#0a0a0a",
