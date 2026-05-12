@@ -1,0 +1,1098 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="SoleVault">
+<meta name="theme-color" content="#0a0a0a">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>SoleVault — Resale Intelligence</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Courier New', monospace; background: #0a0a0a; color: #e8e4d9; min-height: 100vh; }
+  :root {
+    --gold: #c9a84c; --gold-dim: #7a6430; --cream: #e8e4d9; --cream-dim: #9a9690;
+    --bg: #0a0a0a; --bg2: #111111; --bg3: #1a1a1a; --bg4: #222222;
+    --border: rgba(201,168,76,0.2); --border-bright: rgba(201,168,76,0.5);
+    --green: #4caf7d; --red: #c95c4c; --blue: #4c8fc9;
+  }
+  .app { display: flex; flex-direction: column; min-height: 100vh; }
+  .header { display:flex; align-items:center; justify-content:space-between; padding:16px 24px; border-bottom:0.5px solid var(--border); background:var(--bg); }
+  .logo { display:flex; align-items:center; gap:10px; }
+  .logo-icon { width:32px; height:32px; border:1.5px solid var(--gold); display:flex; align-items:center; justify-content:center; font-size:17px; color:var(--gold); font-weight:700; }
+  .logo-text { font-size:19px; font-weight:700; letter-spacing:3px; color:var(--gold); text-transform:uppercase; }
+  .logo-sub { font-size:15px; letter-spacing:2px; color:var(--cream-dim); text-transform:uppercase; }
+  .nav { display:flex; gap:2px; }
+  .nav-btn { padding:9px 16px; font-family:'Courier New',monospace; font-size:19px; letter-spacing:1.5px; text-transform:uppercase; background:transparent; border:0.5px solid transparent; color:var(--cream-dim); cursor:pointer; transition:all 0.15s; }
+  .nav-btn:hover { color:var(--cream); border-color:var(--border); }
+  .nav-btn.active { color:var(--gold); border-color:var(--gold-dim); background:rgba(201,168,76,0.06); }
+  .header-right { font-size:19px; color:var(--cream-dim); letter-spacing:1px; text-align:right; line-height:1.6; }
+  .main { flex:1; padding:24px; }
+  .view { display:none; }
+  .view.active { display:block; }
+  .stats-row { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:24px; }
+  .stat-card { background:var(--bg2); border:0.5px solid var(--border); padding:16px 18px; }
+  .stat-label { font-size:15px; letter-spacing:1.5px; color:var(--cream-dim); text-transform:uppercase; margin-bottom:8px; }
+  .stat-value { font-size:30px; font-weight:700; color:var(--cream); letter-spacing:-1px; }
+  .stat-sub { font-size:17px; color:var(--cream-dim); margin-top:4px; }
+  .stat-up { color:var(--green); }
+  .dash-grid { display:grid; grid-template-columns:1fr 340px; gap:16px; }
+  .panel { background:var(--bg2); border:0.5px solid var(--border); padding:20px; }
+  .panel-title { font-size:15px; letter-spacing:3px; color:var(--gold); text-transform:uppercase; margin-bottom:16px; padding-bottom:10px; border-bottom:0.5px solid var(--border); display:flex; align-items:center; justify-content:space-between; }
+  .inv-table { width:100%; border-collapse:collapse; font-size:15px; }
+  .inv-table th { font-size:15px; letter-spacing:1.5px; color:var(--cream-dim); text-transform:uppercase; padding:8px 10px; text-align:left; border-bottom:0.5px solid var(--border); font-weight:400; }
+  .inv-table td { padding:10px; border-bottom:0.5px solid rgba(201,168,76,0.08); vertical-align:middle; }
+  .inv-table tr:hover td { background:rgba(201,168,76,0.04); }
+  .inv-table tr:last-child td { border-bottom:none; }
+  .shoe-name { font-size:15px; color:var(--cream); font-weight:600; line-height:1.3; }
+  .shoe-sku { font-size:19px; color:var(--cream-dim); margin-top:2px; }
+  .size-badge { display:inline-block; padding:3px 8px; font-size:19px; letter-spacing:1px; border:0.5px solid var(--border-bright); color:var(--gold); background:rgba(201,168,76,0.08); }
+  .platform-prices { display:flex; gap:8px; flex-wrap:wrap; }
+  .plat-tag { font-size:19px; padding:2px 7px; border:0.5px solid var(--border); color:var(--cream-dim); display:flex; align-items:center; gap:4px; }
+  .plat-price { color:var(--cream); font-weight:600; }
+  .plat-best { border-color:var(--green); color:var(--green); background:rgba(76,175,125,0.08); }
+  .plat-best .plat-price { color:var(--green); }
+  .profit-badge { font-size:17px; font-weight:700; padding:3px 9px; background:rgba(76,175,125,0.12); border:0.5px solid var(--green); color:var(--green); }
+  .profit-neg { background:rgba(201,92,76,0.12); border-color:var(--red); color:var(--red); }
+  .rec-badge { font-size:15px; padding:2px 8px; letter-spacing:1px; text-transform:uppercase; border:0.5px solid; display:inline-block; }
+  .rec-sell { border-color:var(--green); color:var(--green); background:rgba(76,175,125,0.1); }
+  .rec-hold { border-color:var(--gold); color:var(--gold); background:rgba(201,168,76,0.1); }
+  .rec-watch { border-color:var(--blue); color:var(--blue); background:rgba(76,143,201,0.1); }
+  .form-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:20px; }
+  .form-group { display:flex; flex-direction:column; gap:6px; }
+  .form-group.full { grid-column:1/-1; }
+  .form-label { font-size:15px; letter-spacing:2px; color:var(--gold); text-transform:uppercase; }
+  .form-input { background:var(--bg3); border:0.5px solid var(--border); color:var(--cream); padding:9px 12px; font-family:'Courier New',monospace; font-size:15px; outline:none; transition:border-color 0.15s; width:100%; }
+  .form-input:focus { border-color:var(--gold); }
+  .form-input::placeholder { color:var(--cream-dim); opacity:0.4; }
+  select.form-input option { background:var(--bg3); }
+  .btn { padding:10px 20px; font-family:'Courier New',monospace; font-size:19px; letter-spacing:2px; text-transform:uppercase; cursor:pointer; border:0.5px solid; transition:all 0.15s; }
+  .btn-primary { background:var(--gold); border-color:var(--gold); color:var(--bg); font-weight:700; }
+  .btn-primary:hover { background:#ddb85a; }
+  .btn-ghost { background:transparent; border-color:var(--border); color:var(--cream-dim); }
+  .btn-ghost:hover { border-color:var(--gold); color:var(--gold); }
+  .btn-danger { background:transparent; border-color:rgba(201,92,76,0.4); color:var(--red); font-size:19px; padding:5px 10px; }
+  .btn-scan { background:rgba(76,143,201,0.12); border-color:var(--blue); color:var(--blue); font-weight:700; }
+  .btn-scan:hover { background:rgba(76,143,201,0.22); }
+  .rec-cards { display:grid; grid-template-columns:1fr; gap:12px; }
+  .rec-card { background:var(--bg3); border:0.5px solid var(--border); padding:18px 20px; display:grid; grid-template-columns:auto 1fr auto; gap:16px; align-items:start; }
+  .rec-card.urgent { border-color:var(--green); background:rgba(76,175,125,0.04); }
+  .rec-score-ring { width:52px; height:52px; border-radius:50%; border:2px solid var(--gold); display:flex; flex-direction:column; align-items:center; justify-content:center; flex-shrink:0; }
+  .rec-score-ring.high { border-color:var(--green); }
+  .rec-score-ring.med { border-color:var(--gold); }
+  .rec-score-ring.low { border-color:var(--blue); }
+  .rec-score { font-size:19px; font-weight:700; color:var(--cream); }
+  .rec-score-label { font-size:19px; color:var(--cream-dim); letter-spacing:1px; text-transform:uppercase; }
+  .rec-shoe { font-size:19px; font-weight:600; color:var(--cream); margin-bottom:4px; }
+  .rec-detail { font-size:17px; color:var(--cream-dim); line-height:1.6; }
+  .rec-action { font-size:17px; color:var(--gold); margin-top:6px; }
+  .rec-right { text-align:right; }
+  .rec-profit-big { font-size:23px; font-weight:700; color:var(--green); }
+  .rec-profit-label { font-size:15px; color:var(--cream-dim); letter-spacing:1px; text-transform:uppercase; margin-top:2px; }
+  .market-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:20px; }
+  .platform-card { background:var(--bg2); border:0.5px solid var(--border); padding:18px; }
+  .platform-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; }
+  .platform-name { font-size:17px; font-weight:700; letter-spacing:2px; text-transform:uppercase; }
+  .platform-fee { font-size:19px; color:var(--cream-dim); }
+  .market-item { display:flex; justify-content:space-between; align-items:center; padding:7px 0; border-bottom:0.5px solid rgba(201,168,76,0.07); font-size:17px; }
+  .market-item:last-child { border-bottom:none; }
+  .chart-select { background:var(--bg3); border:0.5px solid var(--border); color:var(--cream); padding:6px 10px; font-family:'Courier New',monospace; font-size:19px; outline:none; }
+  .time-btns { display:flex; gap:2px; margin-left:auto; }
+  .time-btn { padding:5px 10px; font-family:'Courier New',monospace; font-size:15px; letter-spacing:1px; text-transform:uppercase; background:transparent; border:0.5px solid var(--border); color:var(--cream-dim); cursor:pointer; }
+  .time-btn.active { border-color:var(--gold); color:var(--gold); background:rgba(201,168,76,0.08); }
+  .alerts { display:flex; flex-direction:column; gap:8px; }
+  .alert-item { display:flex; align-items:flex-start; gap:10px; padding:10px 12px; border:0.5px solid; font-size:17px; }
+  .alert-sell { border-color:rgba(76,175,125,0.4); background:rgba(76,175,125,0.06); }
+  .alert-warn { border-color:rgba(201,168,76,0.4); background:rgba(201,168,76,0.06); }
+  .alert-info { border-color:rgba(76,143,201,0.3); background:rgba(76,143,201,0.06); }
+  .alert-text { line-height:1.5; color:var(--cream-dim); }
+  .alert-text strong { color:var(--cream); font-weight:600; }
+  .empty-state { text-align:center; padding:60px 20px; color:var(--cream-dim); }
+  .empty-icon { font-size:40px; margin-bottom:12px; opacity:0.3; }
+  .empty-text { font-size:17px; letter-spacing:1px; text-transform:uppercase; }
+  /* MODAL */
+  .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.88); z-index:100; display:flex; align-items:center; justify-content:center; padding:20px; }
+  .modal { background:var(--bg2); border:0.5px solid var(--gold-dim); width:100%; max-width:560px; max-height:92vh; overflow-y:auto; }
+  .modal-header { padding:18px 22px; border-bottom:0.5px solid var(--border); display:flex; align-items:center; justify-content:space-between; }
+  .modal-title { font-size:19px; letter-spacing:3px; color:var(--gold); text-transform:uppercase; }
+  .modal-close { background:none; border:none; color:var(--cream-dim); cursor:pointer; font-size:21px; line-height:1; }
+  .modal-body { padding:22px; }
+  .divider { height:0.5px; background:var(--border); margin:16px 0; }
+  .tag { font-size:15px; letter-spacing:1px; padding:2px 7px; text-transform:uppercase; border:0.5px solid var(--border); color:var(--cream-dim); display:inline-block; }
+  ::-webkit-scrollbar { width:4px; height:4px; }
+  ::-webkit-scrollbar-track { background:var(--bg); }
+  ::-webkit-scrollbar-thumb { background:var(--gold-dim); }
+  .chart-wrap { position:relative; height:280px; width:100%; }
+  .section-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; }
+  .section-title { font-size:15px; letter-spacing:3px; color:var(--gold); text-transform:uppercase; }
+
+  /* ── PHOTO SCAN UI ─────────────────────────────────── */
+  .scan-tabs { display:flex; gap:0; margin-bottom:20px; border-bottom:0.5px solid var(--border); }
+  .scan-tab { padding:10px 18px; font-family:'Courier New',monospace; font-size:19px; letter-spacing:1.5px; text-transform:uppercase; background:transparent; border:none; border-bottom:2px solid transparent; color:var(--cream-dim); cursor:pointer; transition:all 0.15s; margin-bottom:-1px; }
+  .scan-tab.active { color:var(--gold); border-bottom-color:var(--gold); }
+  .tab-panel { display:none; }
+  .tab-panel.active { display:block; }
+
+  /* Drop zone */
+  .drop-zone {
+    border:1px dashed var(--gold-dim); background:rgba(201,168,76,0.03);
+    padding:36px 20px; text-align:center; cursor:pointer; transition:all 0.2s;
+    position:relative;
+  }
+  .drop-zone:hover, .drop-zone.dragover { border-color:var(--gold); background:rgba(201,168,76,0.07); }
+  .drop-zone input[type=file] { position:absolute; inset:0; opacity:0; cursor:pointer; width:100%; height:100%; }
+  .drop-icon { font-size:36px; margin-bottom:10px; opacity:0.5; }
+  .drop-title { font-size:15px; color:var(--cream); margin-bottom:4px; }
+  .drop-sub { font-size:19px; color:var(--cream-dim); letter-spacing:1px; }
+
+  /* Multi-image queue */
+  .scan-queue { display:grid; grid-template-columns:repeat(auto-fill,minmax(90px,1fr)); gap:10px; margin-top:14px; }
+  .queue-item { position:relative; aspect-ratio:1; background:var(--bg3); border:0.5px solid var(--border); overflow:hidden; }
+  .queue-item img { width:100%; height:100%; object-fit:cover; display:block; }
+  .queue-item .q-remove { position:absolute; top:4px; right:4px; width:18px; height:18px; background:rgba(0,0,0,0.7); border:none; color:#fff; font-size:19px; cursor:pointer; display:flex; align-items:center; justify-content:center; border-radius:2px; }
+  .queue-item .q-status { position:absolute; bottom:0; left:0; right:0; padding:3px 5px; font-size:15px; text-align:center; letter-spacing:1px; text-transform:uppercase; }
+  .q-pending { background:rgba(201,168,76,0.75); color:#000; }
+  .q-scanning { background:rgba(76,143,201,0.85); color:#fff; }
+  .q-done { background:rgba(76,175,125,0.85); color:#fff; }
+  .q-error { background:rgba(201,92,76,0.85); color:#fff; }
+
+  /* Scan progress bar */
+  .scan-progress { margin-top:16px; display:none; }
+  .scan-progress-label { font-size:19px; color:var(--cream-dim); letter-spacing:1px; margin-bottom:6px; display:flex; justify-content:space-between; }
+  .scan-bar-track { height:3px; background:var(--bg4); }
+  .scan-bar-fill { height:3px; background:var(--gold); transition:width 0.4s ease; }
+
+  /* Scanned results review */
+  .scan-results { margin-top:20px; display:none; }
+  .scan-result-card { background:var(--bg3); border:0.5px solid var(--border); padding:14px 16px; margin-bottom:10px; }
+  .scan-result-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }
+  .scan-result-name { font-size:15px; font-weight:600; color:var(--cream); }
+  .scan-result-conf { font-size:15px; padding:2px 8px; letter-spacing:1px; text-transform:uppercase; border:0.5px solid; }
+  .conf-high { border-color:var(--green); color:var(--green); }
+  .conf-med { border-color:var(--gold); color:var(--gold); }
+  .conf-low { border-color:var(--red); color:var(--red); }
+  .scan-fields { display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; }
+  .scan-field { display:flex; flex-direction:column; gap:3px; }
+  .scan-field-label { font-size:17px; letter-spacing:1.5px; color:var(--cream-dim); text-transform:uppercase; }
+  .scan-field input { background:var(--bg2); border:0.5px solid var(--border); color:var(--cream); padding:6px 8px; font-family:'Courier New',monospace; font-size:17px; outline:none; width:100%; }
+  .scan-field input:focus { border-color:var(--gold); }
+  .scan-thumb { width:60px; height:60px; object-fit:cover; border:0.5px solid var(--border); flex-shrink:0; }
+  .scan-result-inner { display:flex; gap:14px; align-items:flex-start; }
+
+  /* AI badge */
+  .ai-badge { display:inline-flex; align-items:center; gap:5px; font-size:15px; letter-spacing:1.5px; color:var(--blue); border:0.5px solid rgba(76,143,201,0.4); padding:3px 8px; text-transform:uppercase; }
+  .ai-dot { width:6px; height:6px; border-radius:50%; background:var(--blue); animation:pulse 1.5s infinite; flex-shrink:0; }
+  @keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:0.3;} }
+
+  .api-key-row { display:flex; gap:8px; margin-bottom:16px; align-items:center; }
+  .api-key-input { flex:1; background:var(--bg3); border:0.5px solid var(--border); color:var(--cream); padding:8px 12px; font-family:'Courier New',monospace; font-size:17px; outline:none; }
+  .api-key-input:focus { border-color:var(--gold); }
+  .api-key-note { font-size:15px; color:var(--cream-dim); letter-spacing:0.5px; line-height:1.5; margin-bottom:14px; }
+  .api-key-note a { color:var(--gold); }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="logo">
+      <div class="logo-icon">SK</div>
+      <div>
+        <div class="logo-text">SoleVault</div>
+        <div class="logo-sub">Resale Intelligence</div>
+      </div>
+    </div>
+    <div class="nav">
+      <button class="nav-btn active" onclick="nav('dashboard')">Dashboard</button>
+      <button class="nav-btn" onclick="nav('inventory')">Inventory</button>
+      <button class="nav-btn" onclick="nav('market')">Market</button>
+      <button class="nav-btn" onclick="nav('history')">History</button>
+      <button class="nav-btn" onclick="nav('recs')">Recommendations</button>
+    </div>
+    <div class="header-right">
+      <div id="clock-date" style="color:var(--gold);font-weight:700;"></div>
+      <div>Portfolio: <span id="portfolio-val" style="color:var(--cream);">—</span></div>
+    </div>
+  </div>
+
+  <!-- MAIN -->
+  <div class="main">
+
+    <!-- DASHBOARD -->
+    <div class="view active" id="view-dashboard">
+      <div class="stats-row">
+        <div class="stat-card"><div class="stat-label">Total Pairs</div><div class="stat-value" id="stat-pairs">0</div><div class="stat-sub">in inventory</div></div>
+        <div class="stat-card"><div class="stat-label">Portfolio Value</div><div class="stat-value" id="stat-value">$0</div><div class="stat-sub stat-up">after fees</div></div>
+        <div class="stat-card"><div class="stat-label">Potential Profit</div><div class="stat-value stat-up" id="stat-profit">$0</div><div class="stat-sub">vs. purchase price</div></div>
+        <div class="stat-card"><div class="stat-label">Best Platform</div><div class="stat-value" id="stat-platform" style="font-size:21px;">—</div><div class="stat-sub">avg. highest returns</div></div>
+      </div>
+      <div class="dash-grid">
+        <div class="panel">
+          <div class="panel-title"><span>Top Sell Opportunities</span><span style="color:var(--cream-dim);font-size:15px;">by profit margin</span></div>
+          <div id="dash-opps"></div>
+        </div>
+        <div class="panel">
+          <div class="panel-title"><span>Market Alerts</span><span id="alert-count" style="color:var(--red);"></span></div>
+          <div id="dash-alerts" class="alerts"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- INVENTORY -->
+    <div class="view" id="view-inventory">
+      <div class="section-header">
+        <div class="section-title">My Inventory</div>
+        <div style="display:flex;gap:8px;">
+          <button class="btn btn-scan" onclick="openScanModal()">📷 Scan Box Photo</button>
+          <button class="btn btn-primary" onclick="openAddModal()">+ Add Manually</button>
+        </div>
+      </div>
+      <div id="inv-empty" class="empty-state" style="display:none;">
+        <div class="empty-icon">👟</div>
+        <div class="empty-text">No inventory yet — scan a box photo or add manually</div>
+      </div>
+      <table class="inv-table" id="inv-table">
+        <thead><tr><th>Shoe</th><th>Size</th><th>Paid</th><th>Market Prices</th><th>Best Profit</th><th>Signal</th><th></th></tr></thead>
+        <tbody id="inv-tbody"></tbody>
+      </table>
+    </div>
+
+    <!-- MARKET -->
+    <div class="view" id="view-market">
+      <div class="section-header">
+        <div class="section-title">Platform Comparison</div>
+        <div style="font-size:19px;color:var(--cream-dim);">Fees included in profit calculations</div>
+      </div>
+      <div class="market-grid" id="market-grid"></div>
+      <div class="panel">
+        <div class="panel-title">Platform Fee Structure</div>
+        <table class="inv-table">
+          <thead><tr><th>Platform</th><th>Seller Fee</th><th>Processing</th><th>Total</th><th>Avg. Time</th><th>Best For</th></tr></thead>
+          <tbody>
+            <tr><td><div class="shoe-name">StockX</div></td><td>9.5%</td><td>3%</td><td>~12.5%</td><td><span class="tag">1–3 days</span></td><td>High-heat drops, Jordan 1s</td></tr>
+            <tr><td><div class="shoe-name">GOAT</div></td><td>9.5%</td><td>2.9%</td><td>~12.4%</td><td><span class="tag">2–5 days</span></td><td>Vintage, rare colorways</td></tr>
+            <tr><td><div class="shoe-name">Flight Club</div></td><td>20%</td><td>3%</td><td>~23%</td><td><span class="tag">7–14 days</span></td><td>High-value, authenticated</td></tr>
+            <tr><td><div class="shoe-name">eBay</div></td><td>13.25%</td><td>2.7%</td><td>~15.9%</td><td><span class="tag">1–7 days</span></td><td>Volume selling, variety</td></tr>
+            <tr><td><div class="shoe-name">Local (no platform)</div></td><td>0%</td><td>0%</td><td>0%</td><td><span class="tag">same day</span></td><td>Fast cash, no fees</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- HISTORY -->
+    <div class="view" id="view-history">
+      <div class="section-header">
+        <div class="section-title">Price History</div>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <select class="chart-select" id="history-shoe-select" onchange="updateHistoryChart()">
+            <option value="">Select a shoe</option>
+          </select>
+          <div class="time-btns">
+            <button class="time-btn active" onclick="setTimeRange(30,this)">30D</button>
+            <button class="time-btn" onclick="setTimeRange(60,this)">60D</button>
+            <button class="time-btn" onclick="setTimeRange(90,this)">90D</button>
+          </div>
+        </div>
+      </div>
+      <div class="panel" style="margin-top:16px;">
+        <div style="display:flex;gap:20px;margin-bottom:12px;font-size:17px;flex-wrap:wrap;">
+          <span style="display:flex;align-items:center;gap:6px;color:var(--cream-dim);"><span style="width:24px;height:2px;background:#00b894;display:inline-block;"></span>StockX</span>
+          <span style="display:flex;align-items:center;gap:6px;color:var(--cream-dim);"><span style="width:24px;height:2px;background:#4c8fc9;display:inline-block;"></span>GOAT</span>
+          <span style="display:flex;align-items:center;gap:6px;color:var(--cream-dim);"><span style="width:24px;height:2px;background:var(--gold);display:inline-block;"></span>Flight Club</span>
+          <span style="display:flex;align-items:center;gap:6px;color:var(--cream-dim);"><span style="width:24px;height:2px;background:#9b59b6;display:inline-block;"></span>eBay</span>
+        </div>
+        <div class="chart-wrap"><canvas id="historyChart" role="img" aria-label="Historical price chart for selected sneaker">Select a shoe to view price history.</canvas></div>
+      </div>
+      <div id="history-stats" style="display:none;margin-top:16px;">
+        <div class="stats-row">
+          <div class="stat-card"><div class="stat-label">All Time High</div><div class="stat-value" id="hs-ath">—</div></div>
+          <div class="stat-card"><div class="stat-label">Period Change</div><div class="stat-value" id="hs-30d">—</div></div>
+          <div class="stat-card"><div class="stat-label">Best Platform</div><div class="stat-value" id="hs-best" style="font-size:19px;">—</div></div>
+          <div class="stat-card"><div class="stat-label">Trend</div><div class="stat-value" id="hs-trend" style="font-size:19px;">—</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RECOMMENDATIONS -->
+    <div class="view" id="view-recs">
+      <div class="section-header">
+        <div class="section-title">Sell Recommendations</div>
+        <button class="btn btn-ghost" onclick="refreshRecs()">↻ Refresh</button>
+      </div>
+      <div id="recs-loading" style="display:none;color:var(--cream-dim);font-size:17px;letter-spacing:1px;padding:20px 0;">Analyzing market conditions...</div>
+      <div id="recs-container" class="rec-cards"></div>
+      <div id="recs-empty" class="empty-state" style="display:none;"><div class="empty-icon">📊</div><div class="empty-text">Add inventory to get recommendations</div></div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ══ SCAN MODAL ══════════════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="scan-modal" style="display:none;">
+  <div class="modal" style="max-width:640px;">
+    <div class="modal-header">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <div class="modal-title">Scan Box Photos</div>
+        <div class="ai-badge"><div class="ai-dot"></div>AI Vision</div>
+      </div>
+      <button class="modal-close" onclick="closeScanModal()">✕</button>
+    </div>
+    <div class="modal-body">
+
+      <!-- API Key -->
+      <div style="background:var(--bg3);border:0.5px solid var(--border);padding:14px 16px;margin-bottom:18px;">
+        <div style="font-size:15px;letter-spacing:2px;color:var(--gold);text-transform:uppercase;margin-bottom:8px;">Anthropic API Key</div>
+        <div class="api-key-row">
+          <input class="api-key-input" id="api-key-input" type="password" placeholder="sk-ant-..." />
+          <button class="btn btn-ghost" style="white-space:nowrap;padding:8px 14px;" onclick="toggleKeyVis()">Show</button>
+        </div>
+        <div class="api-key-note">Your key is used only in your browser and never sent to any server other than Anthropic directly. Get a free key at <a href="https://console.anthropic.com" target="_blank">console.anthropic.com</a> — includes $5 free credit.</div>
+      </div>
+
+      <!-- Tabs -->
+      <div class="scan-tabs">
+        <button class="scan-tab active" onclick="switchScanTab('upload')">Upload Photos</button>
+        <button class="scan-tab" onclick="switchScanTab('camera')">Take Photo</button>
+      </div>
+
+      <!-- Upload tab -->
+      <div class="tab-panel active" id="tab-upload">
+        <div class="drop-zone" id="drop-zone">
+          <input type="file" id="file-input" accept="image/*" multiple onchange="handleFiles(this.files)" />
+          <div class="drop-icon">📦</div>
+          <div class="drop-title">Drop shoe box photos here</div>
+          <div class="drop-sub">or click to browse · JPG, PNG, HEIC · multiple files ok</div>
+        </div>
+        <div class="scan-queue" id="scan-queue"></div>
+        <div class="scan-progress" id="scan-progress">
+          <div class="scan-progress-label"><span id="scan-progress-text">Scanning…</span><span id="scan-progress-pct">0%</span></div>
+          <div class="scan-bar-track"><div class="scan-bar-fill" id="scan-bar" style="width:0%"></div></div>
+        </div>
+        <div style="display:flex;gap:10px;margin-top:16px;" id="scan-btn-row" style="display:none;">
+          <button class="btn btn-scan" id="btn-start-scan" onclick="startScan()" style="flex:1;display:none;">📷 Scan All Photos with AI</button>
+          <button class="btn btn-ghost" onclick="clearQueue()">Clear</button>
+        </div>
+      </div>
+
+      <!-- Camera tab -->
+      <div class="tab-panel" id="tab-camera">
+        <div style="text-align:center;padding:20px 0;">
+          <video id="camera-preview" style="width:100%;max-height:280px;background:#000;display:none;"></video>
+          <canvas id="camera-canvas" style="display:none;"></canvas>
+          <div id="camera-idle" style="padding:30px;color:var(--cream-dim);font-size:17px;">
+            <div style="font-size:36px;margin-bottom:8px;opacity:0.4;">📷</div>
+            Click Start Camera to use your device camera
+          </div>
+          <div style="display:flex;gap:8px;justify-content:center;margin-top:12px;">
+            <button class="btn btn-ghost" id="btn-cam-start" onclick="startCamera()">Start Camera</button>
+            <button class="btn btn-scan" id="btn-cam-snap" onclick="snapPhoto()" style="display:none;">Capture</button>
+            <button class="btn btn-ghost" id="btn-cam-stop" onclick="stopCamera()" style="display:none;">Stop</button>
+          </div>
+          <div id="camera-snaps" class="scan-queue" style="margin-top:14px;"></div>
+          <div style="margin-top:12px;" id="cam-scan-row" style="display:none;">
+            <button class="btn btn-scan" id="btn-cam-scan" onclick="startCamScan()" style="display:none;width:100%;">📷 Scan Captured Photos with AI</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- RESULTS -->
+      <div class="scan-results" id="scan-results">
+        <div class="divider"></div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+          <div style="font-size:15px;letter-spacing:3px;color:var(--gold);text-transform:uppercase;">Scan Results — Review & Edit</div>
+          <button class="btn btn-primary" onclick="addAllScanned()">+ Add All to Inventory</button>
+        </div>
+        <div id="scan-result-list"></div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ══ MANUAL ADD MODAL ════════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="add-modal" style="display:none;">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Add Pair Manually</div>
+      <button class="modal-close" onclick="closeAddModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-group full"><label class="form-label">Shoe Model / Name</label><input class="form-input" id="f-name" placeholder="Air Jordan 1 Retro High OG 'Chicago'" /></div>
+        <div class="form-group"><label class="form-label">SKU</label><input class="form-input" id="f-sku" placeholder="555088-101" /></div>
+        <div class="form-group"><label class="form-label">Colorway</label><input class="form-input" id="f-colorway" placeholder="White/Black-Varsity Red" /></div>
+        <div class="form-group"><label class="form-label">Size (US)</label><input class="form-input" id="f-size" type="number" step="0.5" placeholder="10" /></div>
+        <div class="form-group"><label class="form-label">Condition</label><select class="form-input" id="f-condition"><option value="DS">Deadstock (DS)</option><option value="VNDS">Very Near DS</option><option value="9/10">9/10</option><option value="8/10">8/10</option></select></div>
+        <div class="form-group"><label class="form-label">Purchase Price ($)</label><input class="form-input" id="f-paid" type="number" placeholder="150" /></div>
+        <div class="form-group"><label class="form-label">Purchase Date</label><input class="form-input" id="f-date" type="date" /></div>
+        <div class="form-group"><label class="form-label">Brand</label><select class="form-input" id="f-brand"><option>Nike</option><option>Jordan</option><option>Adidas</option><option>New Balance</option><option>Yeezy</option><option>Other</option></select></div>
+      </div>
+      <div class="divider"></div>
+      <div style="margin-bottom:14px;font-size:15px;color:var(--gold);letter-spacing:2px;text-transform:uppercase;">Market Prices (optional)</div>
+      <div class="form-grid">
+        <div class="form-group"><label class="form-label">StockX ($)</label><input class="form-input" id="f-stockx" type="number" placeholder="auto" /></div>
+        <div class="form-group"><label class="form-label">GOAT ($)</label><input class="form-input" id="f-goat" type="number" placeholder="auto" /></div>
+        <div class="form-group"><label class="form-label">Flight Club ($)</label><input class="form-input" id="f-fc" type="number" placeholder="auto" /></div>
+        <div class="form-group"><label class="form-label">eBay ($)</label><input class="form-input" id="f-ebay" type="number" placeholder="auto" /></div>
+      </div>
+      <div style="display:flex;gap:10px;margin-top:6px;">
+        <button class="btn btn-primary" onclick="addShoe()" style="flex:1;">Add to Inventory</button>
+        <button class="btn btn-ghost" onclick="closeAddModal()">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── STATE ────────────────────────────────────────────────────────────────────
+let inventory = [];
+let historyChart = null;
+let selectedTimeRange = 30;
+let scanQueue = [];        // { file, dataUrl, status }
+let scanResults = [];      // parsed AI results
+let cameraStream = null;
+let cameraSnaps = [];      // { dataUrl }
+
+const PLATFORMS = {
+  stockx:     { name:'StockX',       fee:0.125, color:'#00b894', label:'SX' },
+  goat:       { name:'GOAT',         fee:0.124, color:'#4c8fc9', label:'GT' },
+  flightclub: { name:'Flight Club',  fee:0.23,  color:'#c9a84c', label:'FC' },
+  ebay:       { name:'eBay',         fee:0.159, color:'#9b59b6', label:'EB' },
+};
+
+function genHistory(basePrice, days, trend) {
+  const pts = [], now = new Date();
+  for (let i = days; i >= 0; i--) {
+    const d = new Date(now); d.setDate(d.getDate() - i);
+    const noise = (Math.random() - 0.5) * basePrice * 0.06;
+    const drift = (trend / 100) * (days - i) * basePrice / 30;
+    pts.push({ date: d.toISOString().slice(0,10), price: Math.round(basePrice + drift + noise) });
+  }
+  return pts;
+}
+
+const SEED = [
+  { id:1, name:"Air Jordan 1 Retro High OG 'Chicago Reimagined'", sku:'DZ5485-612', colorway:'Varsity Red/Black-White', size:10, condition:'DS', brand:'Jordan', paid:180, purchaseDate:'2024-11-15', prices:{stockx:380,goat:370,flightclub:395,ebay:345}, history:genHistory(380,90,1.8) },
+  { id:2, name:"Nike SB Dunk Low Pro 'Fog'", sku:'BQ6817-010', colorway:'Medium Grey/Black', size:9.5, condition:'DS', brand:'Nike', paid:110, purchaseDate:'2024-09-20', prices:{stockx:195,goat:188,flightclub:210,ebay:175}, history:genHistory(195,90,-0.4) },
+  { id:3, name:"Adidas Yeezy Boost 350 V2 'Zebra'", sku:'CP9654', colorway:'White/Core Black/Red', size:10.5, condition:'DS', brand:'Yeezy', paid:220, purchaseDate:'2024-10-05', prices:{stockx:280,goat:275,flightclub:310,ebay:265}, history:genHistory(280,90,-1.2) },
+  { id:4, name:"New Balance 990v3 'Grey'", sku:'M990GL3', colorway:'Grey/Silver', size:11, condition:'DS', brand:'New Balance', paid:175, purchaseDate:'2025-01-10', prices:{stockx:220,goat:215,flightclub:245,ebay:200}, history:genHistory(220,90,0.9) },
+  { id:5, name:"Air Jordan 4 Retro 'Military Black'", sku:'DH7138-006', colorway:'Black/Light Steel Grey', size:10, condition:'DS', brand:'Jordan', paid:210, purchaseDate:'2025-02-28', prices:{stockx:445,goat:430,flightclub:480,ebay:410}, history:genHistory(445,90,3.2) }
+];
+
+function initApp() {
+  inventory = JSON.parse(localStorage.getItem('solevault_inv') || 'null') || SEED;
+  renderAll();
+  setInterval(tickClock, 1000);
+  tickClock();
+  setupDragDrop();
+}
+
+function saveInv() { localStorage.setItem('solevault_inv', JSON.stringify(inventory)); }
+
+function tickClock() {
+  const d = document.getElementById('clock-date');
+  if (d) d.textContent = new Date().toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});
+}
+
+// ─── NAV ──────────────────────────────────────────────────────────────────────
+function nav(id) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('view-' + id).classList.add('active');
+  const map = {dashboard:'Dashboard',inventory:'Inventory',market:'Market',history:'History',recs:'Recommendations'};
+  [...document.querySelectorAll('.nav-btn')].find(b => b.textContent === map[id]).classList.add('active');
+  if (id === 'history') renderHistoryView();
+  if (id === 'recs') renderRecs();
+  if (id === 'market') renderMarket();
+}
+
+// ─── RENDER ───────────────────────────────────────────────────────────────────
+function renderAll() { updateStats(); renderInventoryTable(); renderDashOpps(); renderAlerts(); updatePortfolioVal(); }
+
+function updatePortfolioVal() {
+  const total = inventory.reduce((s, sh) => s + bestPrice(sh), 0);
+  const el = document.getElementById('portfolio-val');
+  if (el) el.textContent = '$' + total.toLocaleString();
+}
+
+function bestPrice(shoe) {
+  return Math.max(...Object.entries(shoe.prices).map(([k,v]) => Math.round(v * (1 - PLATFORMS[k].fee))));
+}
+
+function bestPlatformFor(shoe) {
+  let best = null, bestNet = -Infinity;
+  for (const [k,v] of Object.entries(shoe.prices)) {
+    const net = v * (1 - PLATFORMS[k].fee);
+    if (net > bestNet) { bestNet = net; best = k; }
+  }
+  return { platform: best, net: Math.round(bestNet), gross: shoe.prices[best] };
+}
+
+function updateStats() {
+  const portValue = inventory.reduce((s, sh) => s + bestPrice(sh), 0);
+  const totalProfit = inventory.reduce((s, sh) => s + (bestPrice(sh) - sh.paid), 0);
+  document.getElementById('stat-pairs').textContent = inventory.length;
+  document.getElementById('stat-value').textContent = '$' + portValue.toLocaleString();
+  document.getElementById('stat-profit').textContent = (totalProfit >= 0 ? '+' : '') + '$' + totalProfit.toLocaleString();
+  const platCounts = {};
+  inventory.forEach(sh => { const b = bestPlatformFor(sh).platform; platCounts[b] = (platCounts[b]||0)+1; });
+  const top = Object.entries(platCounts).sort((a,b)=>b[1]-a[1])[0];
+  document.getElementById('stat-platform').textContent = top ? PLATFORMS[top[0]].name : '—';
+}
+
+function renderInventoryTable() {
+  const tbody = document.getElementById('inv-tbody');
+  const empty = document.getElementById('inv-empty');
+  const table = document.getElementById('inv-table');
+  if (inventory.length === 0) { table.style.display='none'; empty.style.display='block'; return; }
+  table.style.display=''; empty.style.display='none';
+  tbody.innerHTML = inventory.map(shoe => {
+    const profit = bestPrice(shoe) - shoe.paid;
+    const pct = Math.round((profit / shoe.paid) * 100);
+    const {platform} = bestPlatformFor(shoe);
+    const rec = getSignal(shoe);
+    return `<tr>
+      <td><div class="shoe-name">${shoe.name}</div><div class="shoe-sku">${shoe.brand} · ${shoe.sku||'—'} · ${shoe.condition}</div></td>
+      <td><span class="size-badge">US ${shoe.size}</span></td>
+      <td style="color:var(--cream-dim);font-size:15px;">$${shoe.paid}</td>
+      <td><div class="platform-prices">${Object.entries(shoe.prices).map(([k,v])=>{const isBest=k===platform;return`<span class="plat-tag ${isBest?'plat-best':''}"><span style="color:var(--cream-dim);font-size:15px;">${PLATFORMS[k].label}</span><span class="plat-price">$${v}</span></span>`;}).join('')}</div></td>
+      <td><span class="profit-badge ${profit<0?'profit-neg':''}">${profit>=0?'+':''}$${profit} (${pct>0?'+':''}${pct}%)</span></td>
+      <td><span class="rec-badge rec-${rec.type}">${rec.label}</span></td>
+      <td><button class="btn btn-danger" onclick="deleteShoe(${shoe.id})">✕</button></td>
+    </tr>`;
+  }).join('');
+}
+
+function getSignal(shoe) {
+  const profit = bestPrice(shoe) - shoe.paid;
+  const pct = (profit / shoe.paid) * 100;
+  const hist = shoe.history;
+  const t14 = hist && hist.length >= 14 ? ((hist[hist.length-1].price - hist[hist.length-14].price) / hist[hist.length-14].price * 100) : 0;
+  if (pct > 80 || t14 > 5) return { type:'sell', label:'SELL NOW' };
+  if (pct > 30 && t14 > 0) return { type:'sell', label:'SELL' };
+  if (t14 < -3) return { type:'hold', label:'HOLD' };
+  return { type:'watch', label:'WATCH' };
+}
+
+function renderDashOpps() {
+  const sorted = [...inventory].map(sh=>({...sh,profit:bestPrice(sh)-sh.paid,pct:Math.round(((bestPrice(sh)-sh.paid)/sh.paid)*100)})).sort((a,b)=>b.pct-a.pct).slice(0,4);
+  const el = document.getElementById('dash-opps');
+  if (!sorted.length) { el.innerHTML='<div style="color:var(--cream-dim);font-size:17px;padding:20px 0;text-align:center;">Add inventory to see opportunities</div>'; return; }
+  el.innerHTML = sorted.map(sh => {
+    const bp = bestPlatformFor(sh);
+    return `<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:0.5px solid rgba(201,168,76,0.08);">
+      <div><div style="font-size:15px;color:var(--cream);font-weight:600;">${sh.name.length>38?sh.name.slice(0,38)+'…':sh.name}</div><div style="font-size:19px;color:var(--cream-dim);margin-top:2px;">US ${sh.size} · Best on ${PLATFORMS[bp.platform].name}</div></div>
+      <div style="text-align:right;flex-shrink:0;margin-left:12px;"><div style="font-size:17px;font-weight:700;color:${sh.profit>=0?'var(--green)':'var(--red)'};">${sh.profit>=0?'+':''}$${sh.profit}</div><div style="font-size:19px;color:var(--cream-dim);">${sh.pct>0?'+':''}${sh.pct}%</div></div>
+    </div>`;
+  }).join('');
+}
+
+function renderAlerts() {
+  const alerts = [];
+  inventory.forEach(sh => {
+    const {platform, net} = bestPlatformFor(sh);
+    const pct = ((net - sh.paid) / sh.paid) * 100;
+    const h = sh.history;
+    const t7 = h && h.length >= 7 ? ((h[h.length-1].price - h[h.length-7].price) / h[h.length-7].price * 100) : 0;
+    if (pct > 80) alerts.push({type:'sell', text:`<strong>${sh.name.slice(0,32)}</strong> is up ${Math.round(pct)}% — prime sell window on ${PLATFORMS[platform].name}`});
+    else if (t7 < -4) alerts.push({type:'warn', text:`<strong>${sh.name.slice(0,32)}</strong> dropped ${Math.abs(Math.round(t7))}% this week — consider selling`});
+    else if (t7 > 3) alerts.push({type:'info', text:`<strong>${sh.name.slice(0,32)}</strong> gaining +${Math.round(t7)}% / 7d — hold for higher return`});
+  });
+  const el = document.getElementById('dash-alerts');
+  const cnt = document.getElementById('alert-count');
+  if (cnt) cnt.textContent = alerts.length ? alerts.length + ' active' : '';
+  el.innerHTML = alerts.length
+    ? alerts.slice(0,5).map(a=>`<div class="alert-item alert-${a.type}"><div style="font-size:19px;flex-shrink:0;">${a.type==='sell'?'▲':a.type==='warn'?'⚠':'ℹ'}</div><div class="alert-text">${a.text}</div></div>`).join('')
+    : '<div style="color:var(--cream-dim);font-size:17px;padding:20px 0;text-align:center;">No alerts — market looks stable</div>';
+}
+
+// ─── ADD / DELETE ─────────────────────────────────────────────────────────────
+function openAddModal() { document.getElementById('add-modal').style.display='flex'; document.getElementById('f-date').value=new Date().toISOString().slice(0,10); }
+function closeAddModal() {
+  document.getElementById('add-modal').style.display='none';
+  ['f-name','f-sku','f-colorway','f-size','f-paid','f-stockx','f-goat','f-fc','f-ebay'].forEach(id=>{ document.getElementById(id).value=''; });
+}
+
+function addShoe(data) {
+  if (!data) {
+    const name = document.getElementById('f-name').value.trim();
+    const paid = parseFloat(document.getElementById('f-paid').value);
+    const size = parseFloat(document.getElementById('f-size').value);
+    if (!name||!paid||!size) { alert('Please fill in Name, Size, and Purchase Price.'); return; }
+    const base = paid * (1.5 + Math.random() * 0.8);
+    data = {
+      name, sku: document.getElementById('f-sku').value.trim(),
+      colorway: document.getElementById('f-colorway').value.trim(),
+      size, condition: document.getElementById('f-condition').value,
+      brand: document.getElementById('f-brand').value, paid,
+      purchaseDate: document.getElementById('f-date').value,
+      prices: {
+        stockx: parseFloat(document.getElementById('f-stockx').value)||Math.round(base),
+        goat:   parseFloat(document.getElementById('f-goat').value)||Math.round(base*0.97),
+        flightclub: parseFloat(document.getElementById('f-fc').value)||Math.round(base*1.04),
+        ebay:   parseFloat(document.getElementById('f-ebay').value)||Math.round(base*0.93),
+      }
+    };
+    closeAddModal();
+  }
+  const base = data.paid * (1.5 + Math.random() * 0.8);
+  const shoe = {
+    id: Date.now() + Math.random(),
+    ...data,
+    prices: data.prices || { stockx: Math.round(base), goat: Math.round(base*0.97), flightclub: Math.round(base*1.04), ebay: Math.round(base*0.93) },
+    history: genHistory(data.prices?.stockx || Math.round(base), 90, (Math.random()-0.4)*4)
+  };
+  inventory.push(shoe);
+  saveInv(); renderAll();
+}
+
+function deleteShoe(id) { inventory = inventory.filter(s => s.id !== id); saveInv(); renderAll(); }
+
+// ─── MARKET ───────────────────────────────────────────────────────────────────
+function renderMarket() {
+  const grid = document.getElementById('market-grid');
+  grid.innerHTML = Object.entries(PLATFORMS).map(([key, plat]) => {
+    const items = [...inventory].sort((a,b)=>b.prices[key]-a.prices[key]).slice(0,5);
+    return `<div class="platform-card">
+      <div class="platform-header"><div class="platform-name" style="color:${plat.color};">${plat.name}</div><div class="platform-fee">Fee: ${Math.round(plat.fee*100)}%</div></div>
+      ${items.length === 0 ? '<div style="color:var(--cream-dim);font-size:17px;">No inventory</div>' :
+        items.map(sh => {
+          const price = sh.prices[key], net = Math.round(price*(1-plat.fee)), profit = net-sh.paid;
+          const h = sh.history, t7 = h&&h.length>=7?((h[h.length-1].price-h[h.length-7].price)/h[h.length-7].price*100):0;
+          return `<div class="market-item"><div style="color:var(--cream-dim);">${sh.name.length>28?sh.name.slice(0,28)+'…':sh.name} <span style="font-size:19px;">US ${sh.size}</span></div><div style="display:flex;gap:10px;align-items:center;"><div style="color:var(--cream);font-weight:600;">$${price}</div><div style="font-size:19px;color:${profit>=0?'var(--green)':'var(--red)'};">${profit>=0?'+':''}$${profit}</div><div style="font-size:19px;color:${t7>=0?'var(--green)':'var(--red)'};">${t7>=0?'▲':'▼'}</div></div></div>`;
+        }).join('')
+      }
+    </div>`;
+  }).join('');
+}
+
+// ─── HISTORY ──────────────────────────────────────────────────────────────────
+function renderHistoryView() {
+  const sel = document.getElementById('history-shoe-select');
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">Select a shoe</option>' + inventory.map(sh=>`<option value="${sh.id}" ${sh.id==cur?'selected':''}>${sh.name} (US ${sh.size})</option>`).join('');
+  if (cur) updateHistoryChart();
+}
+
+function setTimeRange(days, btn) {
+  selectedTimeRange = days;
+  document.querySelectorAll('.time-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  updateHistoryChart();
+}
+
+function updateHistoryChart() {
+  const id = parseInt(document.getElementById('history-shoe-select').value);
+  const shoe = inventory.find(s=>s.id===id);
+  const statsEl = document.getElementById('history-stats');
+  if (!shoe) { statsEl.style.display='none'; return; }
+  const hist = shoe.history.slice(-selectedTimeRange);
+  const labels = hist.map(p=>p.date.slice(5));
+  const sxD = hist.map(p=>Math.round(p.price));
+  const gtD = hist.map(p=>Math.round(p.price*0.97+(Math.random()-.5)*8));
+  const fcD = hist.map(p=>Math.round(p.price*1.04+(Math.random()-.5)*6));
+  const ebD = hist.map(p=>Math.round(p.price*0.93+(Math.random()-.5)*10));
+  if (historyChart) historyChart.destroy();
+  historyChart = new Chart(document.getElementById('historyChart').getContext('2d'), {
+    type:'line',
+    data:{labels,datasets:[
+      {label:'StockX',data:sxD,borderColor:'#00b894',backgroundColor:'rgba(0,184,148,0.05)',tension:0.3,borderWidth:1.5,pointRadius:0,pointHoverRadius:4},
+      {label:'GOAT',data:gtD,borderColor:'#4c8fc9',backgroundColor:'rgba(76,143,201,0.05)',tension:0.3,borderWidth:1.5,pointRadius:0,pointHoverRadius:4,borderDash:[4,2]},
+      {label:'Flight Club',data:fcD,borderColor:'#c9a84c',backgroundColor:'rgba(201,168,76,0.05)',tension:0.3,borderWidth:1.5,pointRadius:0,pointHoverRadius:4,borderDash:[8,3]},
+      {label:'eBay',data:ebD,borderColor:'#9b59b6',backgroundColor:'rgba(155,89,182,0.05)',tension:0.3,borderWidth:1.5,pointRadius:0,pointHoverRadius:4,borderDash:[2,2]},
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{mode:'index',intersect:false,backgroundColor:'#111',borderColor:'rgba(201,168,76,0.3)',borderWidth:0.5,titleColor:'#c9a84c',bodyColor:'#e8e4d9',padding:10,callbacks:{label:ctx=>` ${ctx.dataset.label}: $${ctx.parsed.y}`}}},scales:{x:{grid:{color:'rgba(201,168,76,0.06)'},ticks:{color:'#9a9690',font:{family:'Courier New',size:9},maxTicksLimit:8}},y:{grid:{color:'rgba(201,168,76,0.06)'},ticks:{color:'#9a9690',font:{family:'Courier New',size:9},callback:v=>'$'+v}}}}
+  });
+  const ath=Math.max(...sxD),chg=Math.round(((sxD[sxD.length-1]-sxD[0])/sxD[0])*100);
+  document.getElementById('hs-ath').textContent='$'+ath;
+  const chgEl=document.getElementById('hs-30d'); chgEl.textContent=(chg>=0?'+':'')+chg+'%'; chgEl.style.color=chg>=0?'var(--green)':'var(--red)';
+  document.getElementById('hs-best').textContent=PLATFORMS[bestPlatformFor(shoe).platform].name;
+  const rising=sxD[sxD.length-1]>sxD[sxD.length-Math.min(7,sxD.length)];
+  const tEl=document.getElementById('hs-trend'); tEl.textContent=rising?'↑ Rising':'↓ Falling'; tEl.style.color=rising?'var(--green)':'var(--red)';
+  statsEl.style.display='block';
+}
+
+// ─── RECS ─────────────────────────────────────────────────────────────────────
+function refreshRecs() {
+  document.getElementById('recs-loading').style.display='block';
+  document.getElementById('recs-container').style.display='none';
+  setTimeout(()=>{document.getElementById('recs-loading').style.display='none';document.getElementById('recs-container').style.display='';renderRecs();},900);
+}
+
+function renderRecs() {
+  const empty=document.getElementById('recs-empty'), container=document.getElementById('recs-container');
+  if (!inventory.length){empty.style.display='block';container.innerHTML='';return;}
+  empty.style.display='none';
+  const scored = inventory.map(shoe=>{
+    const profit=bestPrice(shoe)-shoe.paid, pct=(profit/shoe.paid)*100, bp=bestPlatformFor(shoe);
+    const h=shoe.history;
+    const t14=h&&h.length>=14?((h[h.length-1].price-h[h.length-14].price)/h[h.length-14].price*100):0;
+    const t30=h&&h.length>=30?((h[h.length-1].price-h[h.length-30].price)/h[h.length-30].price*100):0;
+    let score=50;
+    if(pct>100)score+=30; else if(pct>50)score+=20; else if(pct>20)score+=10;
+    if(t14>3)score-=10; if(t14<-3)score+=15; if(t30<-5)score+=10; if(pct<0)score-=20;
+    score=Math.min(99,Math.max(1,score));
+    let action,why,timing;
+    if(score>=70){action='SELL NOW';timing='Within 7 days';why=`${Math.round(pct)}% return on ${PLATFORMS[bp.platform].name}. ${t14<0?'Prices trending down — ':''}Strong profit opportunity.`;}
+    else if(score>=50){action='SELL SOON';timing='Next 2–4 weeks';why=`${Math.round(pct)}% profit available. ${t14>0?'Mild upward trend — hold a bit longer or lock in gains now.':'Market relatively stable.'}`;}
+    else if(pct<5){action='HOLD';timing='Re-evaluate in 30 days';why='Slim margin at current prices. Hold for a market catalyst.';}
+    else{action='WATCH';timing='Monitor weekly';why=`${Math.round(pct)}% gain available. ${t14>2?'Prices rising — hold for peak.':'Market mixed.'} Best on ${PLATFORMS[bp.platform].name} at $${bp.gross}.`;}
+    return{shoe,score,profit,pct:Math.round(pct),bp,action,why,timing,t14:Math.round(t14*10)/10};
+  }).sort((a,b)=>b.score-a.score);
+  container.innerHTML = scored.map(r=>{
+    const tier=r.score>=70?'high':r.score>=50?'med':'low', urgent=r.score>=70;
+    return `<div class="rec-card ${urgent?'urgent':''}">
+      <div class="rec-score-ring ${tier}"><div class="rec-score">${r.score}</div><div class="rec-score-label">score</div></div>
+      <div>
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;"><div class="rec-shoe">${r.shoe.name}</div><span class="rec-badge rec-${urgent?'sell':r.score>=50?'sell':'hold'}">${r.action}</span></div>
+        <div class="rec-detail">${r.why}</div>
+        <div class="rec-action">→ Platform: <strong>${PLATFORMS[r.bp.platform].name}</strong> · Ask: $${r.bp.gross} · Net: $${r.bp.net} · Timing: ${r.timing}</div>
+        <div style="font-size:19px;color:var(--cream-dim);margin-top:4px;">US ${r.shoe.size} · ${r.shoe.condition} · 14-day trend: <span style="color:${r.t14>=0?'var(--green)':'var(--red)'};">${r.t14>=0?'+':''}${r.t14}%</span></div>
+      </div>
+      <div class="rec-right"><div class="rec-profit-big">${r.profit>=0?'+':''}$${r.profit}</div><div class="rec-profit-label">profit</div><div style="font-size:17px;color:var(--cream-dim);margin-top:4px;">${r.pct>=0?'+':''}${r.pct}%</div></div>
+    </div>`;
+  }).join('');
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// PHOTO SCAN SYSTEM
+// ══════════════════════════════════════════════════════════════════════════════
+
+function openScanModal() {
+  document.getElementById('scan-modal').style.display='flex';
+  scanQueue = []; cameraSnaps = []; scanResults = [];
+  renderScanQueue(); renderScanResults();
+  document.getElementById('scan-results').style.display='none';
+  document.getElementById('scan-progress').style.display='none';
+}
+
+function closeScanModal() {
+  document.getElementById('scan-modal').style.display='none';
+  stopCamera();
+}
+
+function switchScanTab(tab) {
+  document.querySelectorAll('.scan-tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+  event.target.classList.add('active');
+  document.getElementById('tab-'+tab).classList.add('active');
+}
+
+function toggleKeyVis() {
+  const inp = document.getElementById('api-key-input');
+  const btn = event.target;
+  if (inp.type === 'password') { inp.type='text'; btn.textContent='Hide'; }
+  else { inp.type='password'; btn.textContent='Show'; }
+}
+
+// ── Drag & drop ───────────────────────────────────────────────────────────────
+function setupDragDrop() {
+  const zone = document.getElementById('drop-zone');
+  if (!zone) return;
+  zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('dragover'); });
+  zone.addEventListener('dragleave', () => zone.classList.remove('dragover'));
+  zone.addEventListener('drop', e => { e.preventDefault(); zone.classList.remove('dragover'); handleFiles(e.dataTransfer.files); });
+}
+
+function handleFiles(files) {
+  [...files].forEach(file => {
+    if (!file.type.startsWith('image/')) return;
+    const reader = new FileReader();
+    reader.onload = e => {
+      scanQueue.push({ id: Date.now()+Math.random(), file, dataUrl: e.target.result, status: 'pending' });
+      renderScanQueue();
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+function renderScanQueue() {
+  const el = document.getElementById('scan-queue');
+  const btnRow = document.getElementById('scan-btn-row');
+  const btnScan = document.getElementById('btn-start-scan');
+  el.innerHTML = scanQueue.map((item,i) => `
+    <div class="queue-item" id="qi-${item.id}">
+      <img src="${item.dataUrl}" alt="shoe box ${i+1}" />
+      <button class="q-remove" onclick="removeFromQueue('${item.id}')">✕</button>
+      <div class="q-status q-${item.status}">${item.status === 'pending' ? 'ready' : item.status}</div>
+    </div>`).join('');
+  if (btnRow) btnRow.style.display = scanQueue.length ? 'flex' : 'none';
+  if (btnScan) btnScan.style.display = scanQueue.length ? '' : 'none';
+}
+
+function removeFromQueue(id) {
+  scanQueue = scanQueue.filter(i => i.id != id);
+  renderScanQueue();
+}
+
+function clearQueue() {
+  scanQueue = [];
+  renderScanQueue();
+  document.getElementById('scan-results').style.display='none';
+}
+
+// ── Camera ────────────────────────────────────────────────────────────────────
+async function startCamera() {
+  try {
+    cameraStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+    const vid = document.getElementById('camera-preview');
+    vid.srcObject = cameraStream;
+    vid.play();
+    vid.style.display = 'block';
+    document.getElementById('camera-idle').style.display = 'none';
+    document.getElementById('btn-cam-start').style.display = 'none';
+    document.getElementById('btn-cam-snap').style.display = '';
+    document.getElementById('btn-cam-stop').style.display = '';
+  } catch(e) {
+    alert('Camera access denied or not available. Please use the Upload tab instead.');
+  }
+}
+
+function snapPhoto() {
+  const vid = document.getElementById('camera-preview');
+  const canvas = document.getElementById('camera-canvas');
+  canvas.width = vid.videoWidth; canvas.height = vid.videoHeight;
+  canvas.getContext('2d').drawImage(vid, 0, 0);
+  const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
+  cameraSnaps.push({ id: Date.now()+Math.random(), dataUrl, status: 'pending' });
+  renderCameraSnaps();
+}
+
+function renderCameraSnaps() {
+  const el = document.getElementById('camera-snaps');
+  el.innerHTML = cameraSnaps.map((s,i) => `
+    <div class="queue-item" id="cs-${s.id}">
+      <img src="${s.dataUrl}" alt="snap ${i+1}" />
+      <button class="q-remove" onclick="removeCameraSnap('${s.id}')">✕</button>
+      <div class="q-status q-${s.status}">${s.status === 'pending' ? 'ready' : s.status}</div>
+    </div>`).join('');
+  const btn = document.getElementById('btn-cam-scan');
+  if (btn) btn.style.display = cameraSnaps.length ? '' : 'none';
+  const row = document.getElementById('cam-scan-row');
+  if (row) row.style.display = cameraSnaps.length ? '' : 'none';
+}
+
+function removeCameraSnap(id) { cameraSnaps = cameraSnaps.filter(s=>s.id!=id); renderCameraSnaps(); }
+
+function stopCamera() {
+  if (cameraStream) { cameraStream.getTracks().forEach(t=>t.stop()); cameraStream=null; }
+  const vid = document.getElementById('camera-preview');
+  if (vid) { vid.style.display='none'; vid.srcObject=null; }
+  const idle = document.getElementById('camera-idle');
+  if (idle) idle.style.display='block';
+  const s = document.getElementById('btn-cam-start'), p = document.getElementById('btn-cam-snap'), sp = document.getElementById('btn-cam-stop');
+  if (s) s.style.display=''; if (p) p.style.display='none'; if (sp) sp.style.display='none';
+}
+
+function startCamScan() {
+  // move camera snaps into main queue and scan
+  cameraSnaps.forEach(s => scanQueue.push({ id: s.id, dataUrl: s.dataUrl, status: 'pending' }));
+  cameraSnaps = [];
+  renderCameraSnaps();
+  renderScanQueue();
+  startScan();
+}
+
+// ── AI Scanning ───────────────────────────────────────────────────────────────
+async function startScan() {
+  const apiKey = document.getElementById('api-key-input').value.trim();
+  if (!apiKey) { alert('Please enter your Anthropic API key above to use AI scanning.'); return; }
+  if (!scanQueue.length) { alert('No photos in queue.'); return; }
+
+  const progress = document.getElementById('scan-progress');
+  const bar = document.getElementById('scan-bar');
+  const pText = document.getElementById('scan-progress-text');
+  const pPct = document.getElementById('scan-progress-pct');
+  progress.style.display = 'block';
+  scanResults = [];
+
+  const total = scanQueue.length;
+  for (let i = 0; i < total; i++) {
+    const item = scanQueue[i];
+    item.status = 'scanning';
+    renderScanQueue();
+    pText.textContent = `Scanning image ${i+1} of ${total}…`;
+    pPct.textContent = Math.round((i/total)*100) + '%';
+    bar.style.width = Math.round((i/total)*100) + '%';
+
+    try {
+      const result = await scanBoxImage(item.dataUrl, apiKey);
+      result.thumb = item.dataUrl;
+      scanResults.push(result);
+      item.status = 'done';
+    } catch(e) {
+      item.status = 'error';
+      scanResults.push({ error: true, thumb: item.dataUrl, message: e.message });
+    }
+    renderScanQueue();
+  }
+
+  bar.style.width = '100%';
+  pText.textContent = 'Scan complete!';
+  pPct.textContent = '100%';
+  renderScanResults();
+  document.getElementById('scan-results').style.display = 'block';
+  document.getElementById('scan-results').scrollIntoView({ behavior: 'smooth' });
+}
+
+async function scanBoxImage(dataUrl, apiKey) {
+  // Strip data URL prefix to get pure base64
+  const base64 = dataUrl.split(',')[1];
+  const mimeMatch = dataUrl.match(/^data:([^;]+);/);
+  const mediaType = mimeMatch ? mimeMatch[1] : 'image/jpeg';
+
+  const prompt = `You are a sneaker expert analyzing a shoe box label photo.
+
+Extract ALL visible information from this shoe box label and return ONLY a valid JSON object with these fields (use null for any field you cannot read):
+
+{
+  "name": "full shoe model name including colorway name in quotes if visible",
+  "brand": "Nike | Jordan | Adidas | New Balance | Yeezy | Puma | Reebok | Converse | Vans | Other",
+  "sku": "style code / article number",
+  "colorway": "color description from label",
+  "size_us": numeric US size (number only, e.g. 10 or 10.5),
+  "size_uk": numeric UK size if visible,
+  "retail_price": numeric retail price in USD if visible (number only),
+  "confidence": "high | medium | low"
+}
+
+Return ONLY the JSON object. No markdown, no explanation, no code fences.`;
+
+  const response = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true'
+    },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-5',
+      max_tokens: 400,
+      messages: [{
+        role: 'user',
+        content: [
+          { type: 'image', source: { type: 'base64', media_type: mediaType, data: base64 } },
+          { type: 'text', text: prompt }
+        ]
+      }]
+    })
+  });
+
+  if (!response.ok) {
+    const err = await response.json().catch(()=>({}));
+    const msg = err.error?.message || `API error ${response.status}`;
+    // Surface a friendly message for common errors
+    if (response.status === 401) throw new Error('Invalid API key — check your key at console.anthropic.com');
+    if (response.status === 400) throw new Error('Bad request: ' + msg);
+    throw new Error(msg);
+  }
+
+  const data = await response.json();
+  const text = data.content.map(c=>c.text||'').join('').trim();
+
+  // Parse JSON, stripping any accidental fences
+  const clean = text.replace(/```json|```/g,'').trim();
+  const parsed = JSON.parse(clean);
+  return parsed;
+}
+
+function renderScanResults() {
+  const list = document.getElementById('scan-result-list');
+  if (!scanResults.length) { list.innerHTML=''; return; }
+
+  list.innerHTML = scanResults.map((r, i) => {
+    if (r.error) {
+      return `<div class="scan-result-card" style="border-color:rgba(201,92,76,0.4);">
+        <div style="display:flex;gap:12px;align-items:center;">
+          <img src="${r.thumb}" class="scan-thumb" />
+          <div>
+            <div style="color:var(--red);font-size:15px;font-weight:600;">Scan failed</div>
+            <div style="font-size:19px;color:var(--cream-dim);margin-top:4px;">${r.message||'Could not read box label'}</div>
+          </div>
+        </div>
+      </div>`;
+    }
+
+    const conf = r.confidence || 'medium';
+    const confClass = conf === 'high' ? 'conf-high' : conf === 'medium' ? 'conf-med' : 'conf-low';
+
+    return `<div class="scan-result-card">
+      <div class="scan-result-inner">
+        <img src="${r.thumb}" class="scan-thumb" />
+        <div style="flex:1;">
+          <div class="scan-result-header">
+            <div class="scan-result-name">${r.name || 'Unknown Shoe'}</div>
+            <span class="scan-result-conf ${confClass}">${conf} confidence</span>
+          </div>
+          <div class="scan-fields">
+            <div class="scan-field"><div class="scan-field-label">Brand</div><input id="sr-brand-${i}" value="${r.brand||''}" /></div>
+            <div class="scan-field"><div class="scan-field-label">SKU</div><input id="sr-sku-${i}" value="${r.sku||''}" /></div>
+            <div class="scan-field"><div class="scan-field-label">Colorway</div><input id="sr-color-${i}" value="${r.colorway||''}" /></div>
+            <div class="scan-field"><div class="scan-field-label">Size (US)</div><input id="sr-size-${i}" type="number" step="0.5" value="${r.size_us||''}" /></div>
+            <div class="scan-field"><div class="scan-field-label">Retail Price $</div><input id="sr-retail-${i}" type="number" value="${r.retail_price||''}" /></div>
+            <div class="scan-field"><div class="scan-field-label">Name</div><input id="sr-name-${i}" value="${r.name||''}" /></div>
+          </div>
+        </div>
+      </div>
+      <div style="margin-top:12px;display:flex;justify-content:flex-end;">
+        <button class="btn btn-primary" style="font-size:15px;padding:7px 14px;" onclick="addSingleScanned(${i})">+ Add to Inventory</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function getScanResultData(i) {
+  const name = document.getElementById(`sr-name-${i}`)?.value.trim();
+  const paid = parseFloat(document.getElementById(`sr-retail-${i}`)?.value) || 150;
+  const size = parseFloat(document.getElementById(`sr-size-${i}`)?.value) || 10;
+  const brand = document.getElementById(`sr-brand-${i}`)?.value.trim() || 'Nike';
+  const sku = document.getElementById(`sr-sku-${i}`)?.value.trim() || '';
+  const colorway = document.getElementById(`sr-color-${i}`)?.value.trim() || '';
+  return { name: name||'Unknown Shoe', paid, size, brand, sku, colorway, condition: 'DS', purchaseDate: new Date().toISOString().slice(0,10) };
+}
+
+function addSingleScanned(i) {
+  const data = getScanResultData(i);
+  addShoe(data);
+  // Grey out the card to show it was added
+  const cards = document.querySelectorAll('.scan-result-card');
+  if (cards[i]) { cards[i].style.opacity='0.4'; cards[i].style.pointerEvents='none'; }
+  nav('inventory');
+}
+
+function addAllScanned() {
+  scanResults.forEach((r, i) => {
+    if (r.error) return;
+    const data = getScanResultData(i);
+    addShoe(data);
+  });
+  closeScanModal();
+  nav('inventory');
+}
+
+// ── Util ──────────────────────────────────────────────────────────────────────
+Math.std = function(arr) {
+  if (!arr||arr.length<2) return 0;
+  const mean = arr.reduce((a,b)=>a+b,0)/arr.length;
+  return Math.sqrt(arr.reduce((sq,n)=>sq+Math.pow(n-mean,2),0)/arr.length);
+};
+
+// Register service worker for PWA offline support
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js')
+      .catch(err => console.log('SW registration failed (ok in dev):', err));
+  });
+}
+
+initApp();
+</script>
+</body>
+</html>
