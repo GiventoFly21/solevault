@@ -817,9 +817,10 @@ function renderInv(){
 
 function toggleExp(id){const r=document.getElementById('exp-'+id);if(r)r.style.display=r.style.display==='none'?'table-row':'none';}
 
+function getH(sh){const r=sh.hist||sh.history||[];return r.map(p=>({dt:p.dt||p.date||'',p:p.p||p.price||0}));}
 function getSig(sh){
   const cost=tcost(sh),pct=((bnet(sh)-cost)/cost)*100;
-  const h=sh.hist,t14=h&&h.length>=14?((h[h.length-1].p-h[h.length-14].p)/h[h.length-14].p*100):0;
+  const h=getH(sh),t14=h.length>=14?((h[h.length-1].p-h[h.length-14].p)/h[h.length-14].p*100):0;
   if(pct>80||t14>5)return{cls:'sig-sell',lbl:'SELL NOW'};
   if(pct>30&&t14>0)return{cls:'sig-sell',lbl:'SELL'};
   if(t14<-3)return{cls:'sig-hold',lbl:'HOLD'};
@@ -840,7 +841,7 @@ function renderAlerts(){
   const alerts=[];
   inv().forEach(sh=>{
     const cost=tcost(sh),{k,net}=bplat(sh),pct=((net-cost)/cost)*100;
-    const h=sh.hist,t7=h&&h.length>=7?((h[h.length-1].p-h[h.length-7].p)/h[h.length-7].p*100):0;
+    const h=getH(sh),t7=h.length>=7?((h[h.length-1].p-h[h.length-7].p)/h[h.length-7].p*100):0;
     if(pct>80)alerts.push({type:'a-sell',icon:'↑',text:`<strong>${sh.name.slice(0,34)}</strong> is up ${Math.round(pct)}% — prime sell window on ${PLATS[k].name}`});
     else if(t7<-4)alerts.push({type:'a-warn',icon:'⚠',text:`<strong>${sh.name.slice(0,34)}</strong> dropped ${Math.abs(Math.round(t7))}% this week — consider selling`});
     else if(t7>3)alerts.push({type:'a-info',icon:'ℹ',text:`<strong>${sh.name.slice(0,34)}</strong> gaining +${Math.round(t7)}% / 7d — hold for higher return`});
@@ -966,7 +967,11 @@ function setRange(d,btn){timeRange=d;document.querySelectorAll('.time-btn').forE
 function updateHistoryChart(){
   const id=document.getElementById('history-select').value,sh=inv().find(s=>s.id==id),statsEl=document.getElementById('history-stats');
   if(!sh){statsEl.style.display='none';return;}
-  const hist=sh.hist.slice(-timeRange),labels=hist.map(p=>p.dt.slice(5));
+  // Support both old format {date,price} and new format {dt,p}
+  const rawHist=sh.hist||sh.history||[];
+  if(!rawHist.length){statsEl.style.display='none';return;}
+  const norm=rawHist.map(p=>({dt:p.dt||p.date||'',p:p.p||p.price||0}));
+  const hist=norm.slice(-timeRange),labels=hist.map(p=>p.dt?p.dt.slice(5):'');
   const sxD=hist.map(p=>Math.round(p.p)),gtD=hist.map(p=>Math.round(p.p*0.97+(Math.random()-.5)*8)),fcD=hist.map(p=>Math.round(p.p*1.04+(Math.random()-.5)*6)),ebD=hist.map(p=>Math.round(p.p*0.93+(Math.random()-.5)*10));
   if(hChart)hChart.destroy();
   hChart=new Chart(document.getElementById('historyChart').getContext('2d'),{type:'line',data:{labels,datasets:[
@@ -988,9 +993,9 @@ function renderRecs(){
   const empty=document.getElementById('recs-empty'),cont=document.getElementById('recs-container'),inventory=inv();
   if(!inventory.length){empty.style.display='block';cont.innerHTML='';return;}empty.style.display='none';
   const scored=inventory.map(sh=>{
-    const cost=tcost(sh),net=bnet(sh),profit=net-cost,pct=(profit/cost)*100,bp=bplat(sh),h=sh.hist,days=hdays(sh);
-    const t14=h&&h.length>=14?((h[h.length-1].p-h[h.length-14].p)/h[h.length-14].p*100):0;
-    const t30=h&&h.length>=30?((h[h.length-1].p-h[h.length-30].p)/h[h.length-30].p*100):0;
+    const cost=tcost(sh),net=bnet(sh),profit=net-cost,pct=(profit/cost)*100,bp=bplat(sh),h=getH(sh),days=hdays(sh);
+    const t14=h.length>=14?((h[h.length-1].p-h[h.length-14].p)/h[h.length-14].p*100):0;
+    const t30=h.length>=30?((h[h.length-1].p-h[h.length-30].p)/h[h.length-30].p*100):0;
     let score=50;
     if(pct>100)score+=30;else if(pct>50)score+=20;else if(pct>20)score+=10;
     if(t14>3)score-=10;if(t14<-3)score+=15;if(t30<-5)score+=10;if(pct<0)score-=20;
