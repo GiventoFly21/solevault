@@ -971,7 +971,7 @@ function updateHistoryChart(){
   const rawHist=sh.hist||sh.history||[];
   if(!rawHist.length){statsEl.style.display='none';return;}
   const norm=rawHist.map(p=>({dt:p.dt||p.date||'',p:p.p||p.price||0}));
-  const hist=norm.slice(-timeRange),labels=hist.map(p=>p.dt?p.dt.slice(5):'');
+  const rawHist=sh.hist||sh.history||[];if(!rawHist.length){statsEl.style.display='none';return;}const norm=rawHist.map(p=>({dt:p.dt||p.date||'',p:p.p||p.price||0}));const hist=norm.slice(-timeRange),labels=hist.map(p=>p.dt?p.dt.slice(5):'');
   const sxD=hist.map(p=>Math.round(p.p)),gtD=hist.map(p=>Math.round(p.p*0.97+(Math.random()-.5)*8)),fcD=hist.map(p=>Math.round(p.p*1.04+(Math.random()-.5)*6)),ebD=hist.map(p=>Math.round(p.p*0.93+(Math.random()-.5)*10));
   if(hChart)hChart.destroy();
   hChart=new Chart(document.getElementById('historyChart').getContext('2d'),{type:'line',data:{labels,datasets:[
