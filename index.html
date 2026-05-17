@@ -968,12 +968,8 @@ function updateHistoryChart(){
   const id=document.getElementById('history-select').value,sh=inv().find(s=>s.id==id),statsEl=document.getElementById('history-stats');
   if(!sh){statsEl.style.display='none';return;}
   // Support both old format {date,price} and new format {dt,p}
-  const rawHist=sh.hist||sh.history||[];
-  if(!rawHist.length){statsEl.style.display='none';return;}
-  const norm=rawHist.map(p=>({dt:p.dt||p.date||'',p:p.p||p.price||0}));
-  const rawHist=sh.hist||sh.history||[];if(!rawHist.length){statsEl.style.display='none';return;}const norm=rawHist.map(p=>({dt:p.dt||p.date||'',p:p.p||p.price||0}));const hist=norm.slice(-timeRange),labels=hist.map(p=>p.dt?p.dt.slice(5):'');
+ const hist=getH(sh).slice(-timeRange),labels=hist.map(p=>p.dt?p.dt.slice(5):'');
   const sxD=hist.map(p=>Math.round(p.p)),gtD=hist.map(p=>Math.round(p.p*0.97+(Math.random()-.5)*8)),fcD=hist.map(p=>Math.round(p.p*1.04+(Math.random()-.5)*6)),ebD=hist.map(p=>Math.round(p.p*0.93+(Math.random()-.5)*10));
-  if(hChart)hChart.destroy();
   hChart=new Chart(document.getElementById('historyChart').getContext('2d'),{type:'line',data:{labels,datasets:[
     {label:'StockX',data:sxD,borderColor:'#00b894',backgroundColor:'rgba(0,184,148,0.05)',tension:0.3,borderWidth:2,pointRadius:0,pointHoverRadius:4},
     {label:'GOAT',data:gtD,borderColor:'#4c8fc9',backgroundColor:'rgba(76,143,201,0.05)',tension:0.3,borderWidth:2,pointRadius:0,pointHoverRadius:4,borderDash:[4,2]},
