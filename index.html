@@ -12,6 +12,8 @@
 <link rel="apple-touch-icon" href="icon-192.png">
 <title>SoleVault — Resale Intelligence</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
 :root{
@@ -319,6 +321,7 @@ body{font-family:var(--font);background:var(--gray1);color:var(--gray9);min-heig
   <div class="header-right">
     <div class="hdr-date" id="clock-date"></div>
     <button class="btn btn-ghost btn-sm" onclick="openModal('sync-modal')" title="Export/Import data between devices" style="font-size:12px;">📤 Sync</button>
+    <div id="fb-status" style="font-size:11px;color:var(--gray5);display:flex;align-items:center;gap:4px;"><span id="fb-dot" style="width:7px;height:7px;border-radius:50%;background:var(--gray4);display:inline-block;"></span><span id="fb-text">connecting…</span></div>
     <div class="hdr-user" onclick="toggleDrawer()">
       <div class="u-av" id="hdr-av">?</div>
       <div class="u-nm" id="hdr-nm">Select User</div>
@@ -849,6 +852,25 @@ body{font-family:var(--font);background:var(--gray1);color:var(--gray9);min-heig
 </div>
 <script>
 const TAX=0.0881;
+const FIREBASE_CONFIG={apiKey:"AIzaSyBxZH4hsIzrZdydzfMZBo0UCpDg6lgZnZg",authDomain:"solevault-945a0.firebaseapp.com",projectId:"solevault-945a0",storageBucket:"solevault-945a0.firebasestorage.app",messagingSenderId:"143848691523",appId:"1:143848691523:web:0c9fb7d3a5fd8f3e7ec1f6"};
+
+// Init Firebase
+let db=null;
+try{
+  firebase.initializeApp(FIREBASE_CONFIG);
+  db=firebase.firestore();
+  db.settings({cacheSizeBytes:firebase.firestore.CACHE_SIZE_UNLIMITED});
+  db.enablePersistence().catch(()=>{});
+}catch(e){console.warn('Firebase init failed, using localStorage only',e);}
+
+function setFbStatus(state){
+  const dot=document.getElementById('fb-dot'),txt=document.getElementById('fb-text');
+  if(!dot||!txt)return;
+  if(state==='live'){dot.style.background='#16a34a';txt.textContent='synced';}
+  else if(state==='saving'){dot.style.background='#f59e0b';txt.textContent='saving…';}
+  else if(state==='offline'){dot.style.background='#6c757d';txt.textContent='offline';}
+  else{dot.style.background='#dc2626';txt.textContent='sync error';}
+}
 const PLATS={stockx:{name:'StockX',fee:0.125,color:'#00b894',lbl:'SX'},goat:{name:'GOAT',fee:0.124,color:'#4c8fc9',lbl:'GT'},flightclub:{name:'Flight Club',fee:0.23,color:'#b8860b',lbl:'FC'},ebay:{name:'eBay',fee:0.159,color:'#9b59b6',lbl:'EB'}};
 const COND_M={DS:1.0,VNDS:0.95,'9/10':0.85,'8/10':0.75,'7/10':0.60};
 const RELDATES=[
@@ -874,7 +896,16 @@ function guessRelease(name){const n=(name||'').toLowerCase();for(const r of RELD
 let users=[],curId=null,hChart=null,timeRange=30,scanQ=[],scanRes=[],camStream=null,camSnaps=[],selColor='#1a56db';
 
 function gs(){return JSON.parse(localStorage.getItem('sv2')||'null')||{users:[],curId:null};}
-function ss(){localStorage.setItem('sv2',JSON.stringify({users,curId}));}
+function ss(){
+  const now=new Date().toISOString();
+  localStorage.setItem('sv2',JSON.stringify({users,curId,updatedAt:now}));
+  if(db){
+    setFbStatus('saving');
+    db.collection('solevault').doc('data').set({users,curId,updatedAt:now})
+      .then(()=>setFbStatus('live'))
+      .catch(e=>{console.warn('Firebase save failed',e);setFbStatus('error');});
+  }
+}
 function cu(){return users.find(u=>u.id===curId)||null;}
 function inv(){return(cu()||{}).inventory||[];}
 function sld(){return(cu()||{}).sold||[];}
@@ -895,6 +926,7 @@ const SEED=[
 ];
 
 function initApp(){
+  // Start with localStorage immediately so app loads fast
   const store=gs();
   if(store.users&&store.users.length){users=store.users;curId=store.curId||users[0].id;}
   else{
@@ -902,7 +934,7 @@ function initApp(){
     users=[{id:'u_default',name:'My Collection',color:'#1a56db',inventory:oldInv||SEED,sold:[],targets:[]}];
     curId='u_default';ss();
   }
-  // Auto-migrate: if sv2 exists but inventory is empty and old data exists, restore it
+  // Auto-migrate old format
   const oldData=JSON.parse(localStorage.getItem('solevault_inv')||'null');
   if(oldData&&oldData.length&&users.length&&(!users[0].inventory||!users[0].inventory.length)){
     users[0].inventory=oldData;ss();
@@ -911,6 +943,31 @@ function initApp(){
   setInterval(()=>{const el=document.getElementById('clock-date');if(el)el.textContent=new Date().toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});},1000);
   setupDrop();
   if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
+
+  // Connect to Firebase and set up real-time listener
+  if(db){
+    setFbStatus('saving');
+    db.collection('solevault').doc('data').onSnapshot(doc=>{
+      if(doc.exists){
+        const data=doc.data();
+        // Only update if Firebase data is newer than what we have
+        const fbTime=new Date(data.updatedAt||0).getTime();
+        const localStore=gs();
+        const localTime=new Date(localStore.updatedAt||0).getTime();
+        if(fbTime>localTime){
+          users=data.users||users;
+          curId=data.curId||curId;
+          localStorage.setItem('sv2',JSON.stringify({users,curId,updatedAt:data.updatedAt}));
+          renderDrawer();updateHdr();renderAll();
+        }
+        setFbStatus('live');
+      } else {
+        // First time — push local data to Firebase
+        ss();
+        setFbStatus('live');
+      }
+    },err=>{console.warn('Firebase listener error',err);setFbStatus('offline');});
+  }
 }
 
 function renderDrawer(){
